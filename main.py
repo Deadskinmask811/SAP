@@ -3,7 +3,7 @@ import sys
 from pygame.locals import *
 
 WINDOWWIDTH = 800
-WINDOWHEIGHT = 600
+WINDOWHEIGHT = 700
 
 #-----COLORS------
 BLACK = (0,0,0)
@@ -35,7 +35,23 @@ def waitForInput():
 #-----END HELPER FUNCTIONS-----
 
 #-----CLASSES-------
-class Player(object):
+class Entity(object):
+    def __init__(self, start_x, start_y, image, color, moveSpeed):
+        self.size = size
+        self.start_x = start_x
+        self.start_y = start_y
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.image.fill(color)
+        self.rect.topleft = (self.start_x, self.start_y)
+        
+        self.move_speed = moveSpeed
+        self.isShooting = False
+        self.bulletList = []
+        
+
+
+class Player(Entity):
     def __init__(self):
         self.size = 25
         self.start_x = (WINDOWWIDTH / 2) - self.size
@@ -52,42 +68,54 @@ class Player(object):
         
         self.move_speed = 6 
 
-        self.shooting = False
+        self.isShooting = False
         self.bulletList = []
 
     def update(self):
         if self.moving_right and self.rect.right < WINDOWWIDTH:
-            self.rect.move_ip(self.move_speed, 0)
+            self.moveRight()
         if self.moving_left and self.rect.left > 0:
-            self.rect.move_ip(-1 * self.move_speed, 0)
+            self.moveLeft()
         if self.moving_up and self.rect.top > 0:
-            self.rect.move_ip(0, -1 * self.move_speed)
+            self.moveUp()
         if self.moving_down and self.rect.bottom < WINDOWHEIGHT:
-            self.rect.move_ip(0, self.move_speed)
-        if self.shooting:
-            self.newBullet = Projectile(self)
+            self.moveDown()
+
+        if self.isShooting:
+            self.shoot()
 
     def shoot(self):
-        self.shooting = True
+        if not self.isShooting:
+            self.isShooting = True
+        self.newBullet = Projectile(self)    
 
     def stopShoot(self):
-        self.shooting = False
+        self.isShooting = False
 
     def moveRight(self):
+        if not self.moving_right:
+            self.moving_right = True
+            
         self.moving_left = False
-        self.moving_right = True
+        self.rect.move_ip(self.move_speed, 0)
 
     def moveLeft(self):
+        if not self.moving_left:
+            self.moving_left = True
         self.moving_right = False
-        self.moving_left = True
+        self.rect.move_ip(-1 * self.move_speed, 0)
 
     def moveUp(self):
+        if not self.moving_up:
+            self.moving_up = True
         self.moving_down = False
-        self.moving_up = True
+        self.rect.move_ip(0, -1 * self.move_speed)
     
     def moveDown(self):
+        if not self.moving_down:
+            self.moving_down = True
         self.moving_up = False
-        self.moving_down = True
+        self.rect.move_ip(0, self.move_speed)
 
     def stopRight(self):
         self.moving_right = False
@@ -112,38 +140,33 @@ class Projectile(object):
         self.rect = self.image.get_rect()
         self.rect.topleft = (self.player.rect.centerx, self.player.rect.centery)
 
-        self.movement = [None] * 2
-        self.speed = 3
+        self.movement = [None] * 2 # list to hold the movement vector for update()
+        self.speed = 5
+
         self.start_x = self.player.rect.centerx
         self.start_y = self.player.rect.centery
         self.position = (self.rect.x, self.rect.y) 
-        self.mouse_pos = pygame.mouse.get_pos()
-        self.mouse_pos_vector = pygame.math.Vector2(self.mouse_pos[0], self.mouse_pos[1])
+        self.target_pos = pygame.mouse.get_pos()
+        self.target_pos_vector = pygame.math.Vector2(self.target_pos[0], self.target_pos[1])
         self.start_pos_vector = pygame.math.Vector2(self.start_x, self.start_y)
-        self.angle = self.mouse_pos_vector - self.start_pos_vector
+        self.angle = self.target_pos_vector - self.start_pos_vector
         self.direction = pygame.math.Vector2.normalize(self.angle)
         
         player.bulletList.append(self)
         
 
     def update(self):
-        #print('self.position[0]: %s, self.position[1]: %s' %(self.position[0], self.position[1]))
-        #print('self.rect.x: %s, self.rect.y: %s' %(self.rect.x, self.rect.y))
-        #print(self.mouse_pos)
-        #print(self.angle)
-        #print(self.direction) 
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
+        print(self.rect.x)
+        print(self.rect.topleft)
         
-        #print(self.player.rect.x, self.player.rect.y) 
+        
         self.rect.move_ip(self.movement[0], self.movement[1])
-        if self.rect.x < 0 or self.rect.x > WINDOWWIDTH:
-            player.bulletList.remove(self)
-        if self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
+        if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
             player.bulletList.remove(self)
            
-        print(len(player.bulletList))
 
 #-----END CLASSES-----
 
@@ -155,6 +178,7 @@ font = pygame.font.SysFont(None, 22)
 
 playing = True
 
+
 #-----TITLE LOOP-----
 while playing:
     windowSurface.fill(BLACK)
@@ -162,8 +186,12 @@ while playing:
     pygame.display.update()
     waitForInput()
     player = Player()
+    attackTimer = player.attackSpeed - 1 
 
     while True:
+
+        attackTimer += 1
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 terminate()
@@ -181,6 +209,7 @@ while playing:
                     player.moveUp()
                 if event.key == K_SPACE:
                     player.shoot()
+
 
             if event.type == KEYUP:
                 if event.key == ord('d'):
