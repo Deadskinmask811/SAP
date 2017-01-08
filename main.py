@@ -36,7 +36,7 @@ def waitForInput():
 
 #-----CLASSES-------
 class Entity(object):
-    def __init__(self, start_x, start_y, image, color, moveSpeed):
+    def __init__(self,size, start_x, start_y, image, color, moveSpeed):
         self.size = size
         self.start_x = start_x
         self.start_y = start_y
@@ -49,27 +49,11 @@ class Entity(object):
         self.isShooting = False
         self.bulletList = []
         
+        self.moving_right = False
+        self.moving_left = False
+        self.moving_up = False
+        self.moving_down = False
 
-
-class Player(Entity):
-    def __init__(self):
-        self.size = 25
-        self.start_x = (WINDOWWIDTH / 2) - self.size
-        self.start_y = WINDOWHEIGHT - 100
-        self.image = pygame.Surface([self.size, self.size])
-        self.rect = self.image.get_rect()
-        self.image.fill(GREEN)
-        self.rect.topleft = (self.start_x, self.start_y)
-
-        self.moving_right = None 
-        self.moving_left = None
-        self.moving_up = None
-        self.moving_down = None
-        
-        self.move_speed = 6 
-
-        self.isShooting = False
-        self.bulletList = []
 
     def update(self):
         if self.moving_right and self.rect.right < WINDOWWIDTH:
@@ -129,16 +113,26 @@ class Player(Entity):
     def stopDown(self):
         self.moving_down = False
         
-        
+
+# these will most likely hold info about special shots/stats all base functionality in Entity parent
+class Player(Entity):
+    # this is here because python doesnt like empty classes
+    def sayHi(self):
+        print('sdlfkjsdf')
+       
+
 class Projectile(object):
 
+    # need to make this more friendly to use outside of case of player entity.
     def __init__(self, Player):
         self.player = Player
         self.size = 10 
         self.image = pygame.Surface([self.size, self.size])
         self.image.fill(RED)
         self.rect = self.image.get_rect()
-        self.rect.topleft = (self.player.rect.centerx, self.player.rect.centery)
+        #self.rect.topleft = (self.player.rect.centerx, self.player.rect.centery)
+        self.rect.centerx = (self.player.rect.centerx)
+        self.rect.centery = (self.player.rect.centery)
 
         self.movement = [None] * 2 # list to hold the movement vector for update()
         self.speed = 5
@@ -159,10 +153,7 @@ class Projectile(object):
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
-        print(self.rect.x)
-        print(self.rect.topleft)
-        
-        
+       
         self.rect.move_ip(self.movement[0], self.movement[1])
         if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
             player.bulletList.remove(self)
@@ -185,12 +176,9 @@ while playing:
     drawText('SHOOT AND PROSPER', WHITE, WINDOWWIDTH / 3, WINDOWHEIGHT / 3, windowSurface)
     pygame.display.update()
     waitForInput()
-    player = Player()
-    attackTimer = player.attackSpeed - 1 
+    player = Player(10, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([50,50]), GREEN, 10)
 
     while True:
-
-        attackTimer += 1
 
         for event in pygame.event.get():
             if event.type == QUIT:
