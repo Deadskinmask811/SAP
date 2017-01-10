@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 from pygame.locals import *
 
 #-----WINDOW DIMENSIONS-----
@@ -72,7 +73,7 @@ class Entity(object):
     def shoot(self):
         if not self.isShooting:
             self.isShooting = True
-        self.newBullet = Projectile(self)    
+        self.newBullet = Projectile(self, pygame.mouse.get_pos())    
 
     def stopShoot(self):
         self.isShooting = False
@@ -121,11 +122,16 @@ class Player(Entity):
     def sayHi(self):
         print('sdlfkjsdf')
        
+class Enemy(Entity):
+    #this is here because python doesnt like empty classes
+    def sayHi(self):
+        print('sdlfksjd')
 
 class Projectile(object):
 
-    def __init__(self, Entity):
+    def __init__(self, Entity, target):
         self.entity = Entity 
+        self.target = target
         self.size = 6
         self.image = pygame.Surface([self.size, self.size])
         self.image.fill(RED)
@@ -139,7 +145,7 @@ class Projectile(object):
         self.start_x = self.entity.rect.centerx
         self.start_y = self.entity.rect.centery
         self.position = (self.rect.x, self.rect.y) 
-        self.target_pos = pygame.mouse.get_pos()
+        self.target_pos = self.target 
         self.target_pos_vector = pygame.math.Vector2(self.target_pos[0], self.target_pos[1])
         self.start_pos_vector = pygame.math.Vector2(self.start_x, self.start_y)
         self.angle = self.target_pos_vector - self.start_pos_vector
@@ -164,6 +170,7 @@ class Projectile(object):
             self.entity.bulletList.remove(self)
 
         self.hasHitEntity(hostileEntityList)
+
 #-----END CLASSES-----
 
 pygame.init()
@@ -185,6 +192,10 @@ while playing:
     #--------Player(size, x, y, surface, color, moveSpeed)-----
     player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10)
     hostileEntityList = []
+    for e in range(10):
+        newEnemy = Enemy(0, random.randint(0 + player.rect.width, WINDOWWIDTH - player.rect.width), random.randint(0 + player.rect.height, WINDOWHEIGHT + player.rect.height), pygame.Surface([30,30]), BLUE, 0)
+        hostileEntityList.append(newEnemy)
+    
     while True:
 
         for event in pygame.event.get():
@@ -204,6 +215,7 @@ while playing:
                     player.moveUp()
                 if event.key == K_SPACE:
                     player.shoot()
+
             if event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     player.shoot()
@@ -226,13 +238,15 @@ while playing:
 
         #-----UPDATE INFORMATION-----
         player.update()
-        for b in player.bulletList[:]:
+
+        for b in player.bulletList:
             b.update(hostileEntityList)
 
-        print(len(player.bulletList)) 
         #-----DRAW INFO TO SCREEN-----
         windowSurface.fill(BLACK)    
         windowSurface.blit(player.image, player.rect)
+        for e in hostileEntityList:
+            windowSurface.blit(e.image, e.rect)
         for b in player.bulletList:
             windowSurface.blit(b.image, b.rect)
 
