@@ -2,8 +2,9 @@ import pygame
 import sys
 from pygame.locals import *
 
+#-----WINDOW DIMENSIONS-----
 WINDOWWIDTH = 800
-WINDOWHEIGHT = 700
+WINDOWHEIGHT = 600
 
 #-----COLORS------
 BLACK = (0,0,0)
@@ -36,14 +37,14 @@ def waitForInput():
 
 #-----CLASSES-------
 class Entity(object):
-    def __init__(self,size, start_x, start_y, image, color, moveSpeed):
-        self.size = size
+    def __init__(self, size, start_x, start_y, image, color, moveSpeed):
+        self.size = size # useful only when using an image surface instead of fill surface
         self.start_x = start_x
         self.start_y = start_y
         self.image = image
         self.rect = self.image.get_rect()
         self.image.fill(color)
-        self.rect.topleft = (self.start_x, self.start_y)
+        self.rect.centerx, self.rect.centery = self.start_x, self.start_y
         
         self.move_speed = moveSpeed
         self.isShooting = False
@@ -123,22 +124,20 @@ class Player(Entity):
 
 class Projectile(object):
 
-    # need to make this more friendly to use outside of case of player entity.
-    def __init__(self, Player):
-        self.player = Player
-        self.size = 10 
+    def __init__(self, Entity):
+        self.entity = Entity 
+        self.size = 6
         self.image = pygame.Surface([self.size, self.size])
         self.image.fill(RED)
         self.rect = self.image.get_rect()
-        #self.rect.topleft = (self.player.rect.centerx, self.player.rect.centery)
-        self.rect.centerx = (self.player.rect.centerx)
-        self.rect.centery = (self.player.rect.centery)
+        self.rect.centerx = (self.entity.rect.centerx)
+        self.rect.centery = (self.entity.rect.centery)
 
         self.movement = [None] * 2 # list to hold the movement vector for update()
-        self.speed = 5
+        self.speed = 20
 
-        self.start_x = self.player.rect.centerx
-        self.start_y = self.player.rect.centery
+        self.start_x = self.entity.rect.centerx
+        self.start_y = self.entity.rect.centery
         self.position = (self.rect.x, self.rect.y) 
         self.target_pos = pygame.mouse.get_pos()
         self.target_pos_vector = pygame.math.Vector2(self.target_pos[0], self.target_pos[1])
@@ -146,26 +145,32 @@ class Projectile(object):
         self.angle = self.target_pos_vector - self.start_pos_vector
         self.direction = pygame.math.Vector2.normalize(self.angle)
         
-        player.bulletList.append(self)
+        self.entity.bulletList.append(self)
         
+    def hasHitEntity(self, hostileEntityList):
+        for h in hostileEntityList:
+            if self.rect.colliderect(h):
+                hostileEntityList.remove(h)
+                self.entity.bulletList.remove(self)
 
-    def update(self):
+    def update(self, hostileEntityList):
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
        
         self.rect.move_ip(self.movement[0], self.movement[1])
-        if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
-            player.bulletList.remove(self)
-           
 
+        if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
+            self.entity.bulletList.remove(self)
+
+        self.hasHitEntity(hostileEntityList)
 #-----END CLASSES-----
 
 pygame.init()
 clock = pygame.time.Clock()
 windowSurface = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
 pygame.display.set_caption('Shoot and Prosper')
-font = pygame.font.SysFont(None, 22)
+font = pygame.font.SysFont(None, 32)
 
 playing = True
 
@@ -176,8 +181,10 @@ while playing:
     drawText('SHOOT AND PROSPER', WHITE, WINDOWWIDTH / 3, WINDOWHEIGHT / 3, windowSurface)
     pygame.display.update()
     waitForInput()
-    player = Player(10, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([50,50]), GREEN, 10)
 
+    #--------Player(size, x, y, surface, color, moveSpeed)-----
+    player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10)
+    hostileEntityList = []
     while True:
 
         for event in pygame.event.get():
@@ -197,7 +204,9 @@ while playing:
                     player.moveUp()
                 if event.key == K_SPACE:
                     player.shoot()
-
+            if event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    player.shoot()
 
             if event.type == KEYUP:
                 if event.key == ord('d'):
@@ -211,15 +220,22 @@ while playing:
                 if event.key == K_SPACE:
                     player.stopShoot()
                    
+            if event.type == MOUSEBUTTONUP:
+                if event.button == 1:
+                    player.stopShoot()
+
         #-----UPDATE INFORMATION-----
         player.update()
         for b in player.bulletList[:]:
-            b.update()
+            b.update(hostileEntityList)
+
+        print(len(player.bulletList)) 
         #-----DRAW INFO TO SCREEN-----
         windowSurface.fill(BLACK)    
         windowSurface.blit(player.image, player.rect)
-        for b in player.bulletList[:]:
+        for b in player.bulletList:
             windowSurface.blit(b.image, b.rect)
+
         pygame.display.update()
         clock.tick(60) 
        
