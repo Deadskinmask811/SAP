@@ -197,10 +197,11 @@ class Projectile(object):
     def hasHitEntity(self, hostileEntityList):
         for h in hostileEntityList:
             if self.rect.colliderect(h) and isinstance(h, Boss): #check to see if boss is hit and reduce hp
-                print('boss hit')
+                print('%s hit' %(h.name))
                 self.doDamage(1, h) # do 1 damage to h 
                 #hostileEntityList.remove(h)
-                self.entity.bulletList.remove(self)
+                if self.entity.bulletList.count(self) > 0:
+                    self.entity.bulletList.remove(self)
 
     def update(self, hostileEntityList):
         self.movement[0] = self.position[0] - self.rect.x
@@ -209,8 +210,8 @@ class Projectile(object):
        
         self.rect.move_ip(self.movement[0], self.movement[1])
         
-        self.hasHitEntity(hostileEntityList)
-        #print(self.entity.bulletList.count(self))
+        if self.entity.bulletList.count(self) > 0:
+            self.hasHitEntity(hostileEntityList)
         if self.entity.bulletList.count(self) > 0:
             if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
                 self.entity.bulletList.remove(self)
@@ -240,10 +241,11 @@ while True:
     #--------Entity(size, x, y, surface, color, moveSpeed, hp)-----
     player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10, 10)
     #------Boss(size, x, y, surface, color, moveSpeed, hp, name)-----
-    #boss = Boss(10, WINDOWWIDTH / 2, 100, pygame.Surface([50,50]), BLUE, 10, 15, "BIG BOSS") 
-   
+    boss = Boss(10, WINDOWWIDTH / 2, 100, pygame.Surface([50,50]), BLUE, 10, 15, "BIG BOSS") 
+    boss2 = Boss(10, (WINDOWWIDTH / 2) - 5, 105, pygame.Surface([50,50]), GREEN, 10, 15, 'butts') 
     hostileEntityList = []
-    #hostileEntityList.append(boss)
+    hostileEntityList.append(boss)
+    hostileEntityList.append(boss2)
     #print(hostileEntityList[0])
     while playing:
 
