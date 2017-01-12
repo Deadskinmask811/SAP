@@ -65,7 +65,6 @@ class Entity(object):
         self.shootTimer += dt
         # see if Entity is alive before proceeding       
         if not self.isAlive():
-            print('poop')
             playing = False
             
         if self.moving_right and self.rect.right < WINDOWWIDTH:
@@ -154,6 +153,7 @@ class Boss(Entity):
     def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, name):
         super().__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
         self.name = name
+        self.isShooting = True
         print(self.name)
     
     def isAlive(self):
@@ -163,6 +163,34 @@ class Boss(Entity):
             hostileEntityList.remove(self)
 
         return self.alive
+   
+    def shoot(self, dt, Entity):
+        if not self.isShooting:
+            self.isShooting = True
+        player = Entity 
+        targetLocation = (player.rect.x, player.rect.y)  
+        self.newBullet = Projectile(self, targetLocation)    
+
+    def update(self, dt):
+        self.shootTimer += dt
+        # see if Entity is alive before proceeding       
+        if not self.isAlive():
+            playing = False
+            
+        if self.moving_right and self.rect.right < WINDOWWIDTH:
+            self.moveRight()
+        if self.moving_left and self.rect.left > 0:
+            self.moveLeft()
+        if self.moving_up and self.rect.top > 0:
+            self.moveUp()
+        if self.moving_down and self.rect.bottom < WINDOWHEIGHT:
+            self.moveDown()
+
+        if self.isShooting and self.shootTimer >= self.shootFrequency:
+            self.shoot(dt, player)
+            self.shootTimer = 0 
+
+
 
 class Projectile(object):
 
@@ -197,27 +225,30 @@ class Projectile(object):
     def hasHitEntity(self, hostileEntityList):
         for h in hostileEntityList:
             if self.rect.colliderect(h) and isinstance(h, Boss): #check to see if boss is hit and reduce hp
-                print('%s hit' %(h.name))
+#                print('%s hit: hp left: %s ' %(h.name, h.hp))
                 self.doDamage(1, h) # do 1 damage to h 
-                #hostileEntityList.remove(h)
-                if self.entity.bulletList.count(self) > 0:
-                    self.entity.bulletList.remove(self)
+                return h 
+
+    def removeFromList(self): # remove self from Entity bullet list
+        if self.entity.bulletList.count(self) > 0:
+            self.entity.bulletList.remove(self)
 
     def update(self, hostileEntityList):
+        #TODO check before colission to see if movement[0] is > distance between proj and enemy to draw projectile hitting enemy
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
-       
+
         self.rect.move_ip(self.movement[0], self.movement[1])
-        
+
         if self.entity.bulletList.count(self) > 0:
-            self.hasHitEntity(hostileEntityList)
+            enemy = self.hasHitEntity(hostileEntityList)
+            if self.hasHitEntity(hostileEntityList):
+                self.removeFromList()
+        
         if self.entity.bulletList.count(self) > 0:
             if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
                 self.entity.bulletList.remove(self)
-
-
-
         
 #-----END CLASSES-----
 
@@ -241,12 +272,8 @@ while True:
     #--------Entity(size, x, y, surface, color, moveSpeed, hp)-----
     player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10, 10)
     #------Boss(size, x, y, surface, color, moveSpeed, hp, name)-----
-    boss = Boss(10, WINDOWWIDTH / 2, 100, pygame.Surface([50,50]), BLUE, 10, 15, "BIG BOSS") 
-    boss2 = Boss(10, (WINDOWWIDTH / 2) - 5, 105, pygame.Surface([50,50]), GREEN, 10, 15, 'butts') 
+    friendlyEntityList = [player]
     hostileEntityList = []
-    hostileEntityList.append(boss)
-    hostileEntityList.append(boss2)
-    #print(hostileEntityList[0])
     while playing:
 
         dt = clock.tick(60) # delta time to keep track of event timing
@@ -298,9 +325,13 @@ while True:
 
         #-----UPDATE INFORMATION-----
         player.update(dt)
+
         if len(hostileEntityList) > 0:
             for e in hostileEntityList:
                 e.update(dt)
+                for b in e.bulletList:
+                    b.update(friendlyEntityList)
+
         # update all info for bullets belonging to player
         for b in player.bulletList:
             b.update(hostileEntityList)
@@ -312,6 +343,9 @@ while True:
             windowSurface.blit(e.image, e.rect)
         for b in player.bulletList:
             windowSurface.blit(b.image, b.rect)
+        for e in hostileEntityList:
+            for b in e.bulletList:
+                windowSurface.blit(b.image, b.rect)
 
         pygame.display.update()
         clock.tick(60)
