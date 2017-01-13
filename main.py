@@ -151,7 +151,7 @@ class Enemy(Entity):
 
 class Boss(Entity):
     def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, name):
-        super().__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
+        super(Boss, self).__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
         self.name = name
         self.isShooting = True
         print(self.name)
