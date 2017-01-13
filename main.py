@@ -138,7 +138,10 @@ class Entity(object):
         
     def setHp(self, value): # universal function for changing hp, damage values get passed as negative and healing get passed as positive.
         self.hp += value
-        
+class Player(Entity):
+    def stopbreakingmygamenate():
+        print('fuck you')
+
 class Boss(Entity):
     def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, name):
         super(Boss, self).__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
