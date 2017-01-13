@@ -13,6 +13,7 @@ WHITE = (255,255,255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+YELLOW = (244, 213, 12)
 
 #-----HELPER FUNCTIONS-----
 def terminate():
@@ -90,7 +91,7 @@ class Entity(object):
             self.isShooting = True
         
         targetLocation = pygame.mouse.get_pos()
-        self.newBullet = Projectile(self, targetLocation)    
+        self.newBullet = Projectile(self, targetLocation, YELLOW)    
             
     def startShoot(self):
         self.isShooting = True
@@ -138,17 +139,6 @@ class Entity(object):
     def setHp(self, value): # universal function for changing hp, damage values get passed as negative and healing get passed as positive.
         self.hp += value
         
-# these will most likely hold info about special shots/stats all base functionality in Entity parent
-class Player(Entity):
-    # this is here because python doesnt like empty classes
-    def sayHi(self):
-        print('sdlfkjsdf')
-       
-class Enemy(Entity):
-    #this is here because python doesnt like empty classes
-    def sayHi(self):
-        print('sdlfksjd')
-
 class Boss(Entity):
     def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, name):
         super(Boss, self).__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
@@ -169,7 +159,7 @@ class Boss(Entity):
             self.isShooting = True
         player = Entity 
         targetLocation = (player.rect.x, player.rect.y)  
-        self.newBullet = Projectile(self, targetLocation)    
+        self.newBullet = Projectile(self, targetLocation, RED)    
 
     def update(self, dt):
         self.shootTimer += dt
@@ -194,12 +184,12 @@ class Boss(Entity):
 
 class Projectile(object):
 
-    def __init__(self, Entity, target):
+    def __init__(self, Entity, target, color):
         self.entity = Entity 
         self.target = target
         self.size = 6
         self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(RED)
+        self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.centerx = (self.entity.rect.centerx)
         self.rect.centery = (self.entity.rect.centery)
@@ -259,6 +249,7 @@ pygame.display.set_caption('Shoot and Prosper')
 font = pygame.font.SysFont(None, 32)
 
 playing = True
+print(pygame.version.ver)
 
 #-----TITLE LOOP-----
 while True:
