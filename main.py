@@ -39,7 +39,7 @@ def waitForInput():
 
 #-----CLASSES-------
 class Entity(object):
-    def __init__(self, size, start_x, start_y, image, color, moveSpeed, hp):
+    def __init__(self, size, start_x, start_y, image, color, moveSpeed, hp, shootFrequency, projectileSize):
         self.size = size # useful only when using an image surface instead of fill surface
         self.hp = hp
         self.alive = True
@@ -60,7 +60,8 @@ class Entity(object):
         self.moving_down = False
 
         self.shootTimer = 0
-        self.shootFrequency = 50  
+        self.shootFrequency = shootFrequency  
+        self.projectileSize = projectileSize
 
     def update(self, dt):
         self.shootTimer += dt
@@ -85,14 +86,14 @@ class Entity(object):
         if self.hp <= 0:
             self.alive = False
         return self.alive
-
-    def shoot(self, dt):
+    
+    def shoot(self, dt, Entity): # shoot at target Entity
         if not self.isShooting:
             self.isShooting = True
+        entity = Entity 
+        targetLocation = (entity.rect.x, entity.rect.y)  
+        self.newBullet = Projectile(self, targetLocation, RED, self.projectileSize)    
         
-        targetLocation = pygame.mouse.get_pos()
-        self.newBullet = Projectile(self, targetLocation, YELLOW)    
-            
     def startShoot(self):
         self.isShooting = True
 
@@ -138,13 +139,19 @@ class Entity(object):
         
     def setHp(self, value): # universal function for changing hp, damage values get passed as negative and healing get passed as positive.
         self.hp += value
-class Player(Entity):
-    def stopbreakingmygamenate():
-        print('fuck you')
 
+class Player(Entity):
+
+    def shoot(self, dt): # Players shoot() is directed to the mouse location instead of an Entity location
+        if not self.isShooting:
+            self.isShooting = True
+        
+        targetLocation = pygame.mouse.get_pos()
+        self.newBullet = Projectile(self, targetLocation, YELLOW, 7)    
+     
 class Boss(Entity):
-    def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, name):
-        super(Boss, self).__init__(size, start_x, start_y, surface, color, moveSpeed, hp)
+    def __init__(self, size, start_x, start_y, surface, color, moveSpeed, hp, shootFrequency, projectileSize, name):
+        super(Boss, self).__init__(size, start_x, start_y, surface, color, moveSpeed, hp, shootFrequency, projectileSize)
         self.name = name
         self.isShooting = True
         print(self.name)
@@ -162,7 +169,7 @@ class Boss(Entity):
             self.isShooting = True
         player = Entity 
         targetLocation = (player.rect.x, player.rect.y)  
-        self.newBullet = Projectile(self, targetLocation, RED)    
+        self.newBullet = Projectile(self, targetLocation, RED, self.projectileSize)    
 
     def update(self, dt):
         self.shootTimer += dt
@@ -187,10 +194,11 @@ class Boss(Entity):
 
 class Projectile(object):
 
-    def __init__(self, Entity, target, color):
+    def __init__(self, Entity, target, color, size):
         self.entity = Entity 
         self.target = target
-        self.size = 6
+        self.size = size
+        self.isLive = True
         self.image = pygame.Surface([self.size, self.size])
         self.image.fill(color)
         self.rect = self.image.get_rect()
@@ -215,9 +223,9 @@ class Projectile(object):
         damageTaken = damageAmount * -1 # make damageAmount a negative number to pass to setHp on entity.
         target.setHp(damageTaken)
 
-    def hasHitEntity(self, hostileEntityList):
-        for h in hostileEntityList:
-            if self.rect.colliderect(h) and isinstance(h, Boss): #check to see if boss is hit and reduce hp
+    def hasHitEntity(self, entityList):
+        for h in entityList:
+            if self.rect.colliderect(h) and isinstance(h, Entity): #check to see if boss is hit and reduce hp
 #                print('%s hit: hp left: %s ' %(h.name, h.hp))
                 self.doDamage(1, h) # do 1 damage to h 
                 return h 
@@ -226,19 +234,39 @@ class Projectile(object):
         if self.entity.bulletList.count(self) > 0:
             self.entity.bulletList.remove(self)
 
-    def update(self, hostileEntityList):
+    def checkIfLive(self):
+        return self.isLive
+
+    def update(self, entityList):
+        entityList = entityList
         #TODO check before colission to see if movement[0] is > distance between proj and enemy to draw projectile hitting enemy
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
 
         self.rect.move_ip(self.movement[0], self.movement[1])
-
-        if self.entity.bulletList.count(self) > 0:
-            enemy = self.hasHitEntity(hostileEntityList)
-            if self.hasHitEntity(hostileEntityList):
-                self.removeFromList()
         
+        if not self.checkIfLive():
+            self.entity.bulletList.remove(self)
+         
+        print(self.angle[0])
+        print(self.angle[1])
+        
+        if self.entity.bulletList.count(self) > 0:
+            enemy = self.hasHitEntity(entityList)
+            if self.hasHitEntity(entityList):
+                self.isLive = False
+                print('HIT SOMETHING')
+                #TODO all of this sucks, replace it
+                if self.angle[0] > 0: # if shooting right
+                    self.movement[0] = (enemy.rect.left - self.rect.right) - 1
+                if self.angle[0] < 0: # if shooting left
+                    self.rect.left = enemy.rect.x + enemy.rect.width
+                if self.angle[1] > 0: # if shooting down
+                    self.rect.bottom = enemy.rect.top
+                if self.angle[1] < 0: # if shooting up
+                    self.rect.top = enemy.rect.bottom
+           
         if self.entity.bulletList.count(self) > 0:
             if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
                 self.entity.bulletList.remove(self)
@@ -252,10 +280,10 @@ pygame.display.set_caption('Shoot and Prosper')
 font = pygame.font.SysFont(None, 32)
 
 playing = True
-print(pygame.version.ver)
 
 #-----TITLE LOOP-----
 while True:
+
     #-----MAIN TITLE SCREEN-----
     windowSurface.fill(BLACK)
     drawText('SHOOT AND PROSPER', WHITE, WINDOWWIDTH / 3, WINDOWHEIGHT / 3, windowSurface)
@@ -264,10 +292,11 @@ while True:
 
     #-----Entity SETUP------
     #--------Entity(size, x, y, surface, color, moveSpeed, hp)-----
-    player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10, 10)
+    player = Player(5, WINDOWWIDTH / 2, WINDOWHEIGHT / 2, pygame.Surface([20, 20]), GREEN, 10, 10, 50, 10)
     #------Boss(size, x, y, surface, color, moveSpeed, hp, name)-----
-    friendlyEntityList = [player]
+    friendlyEntityList = []
     hostileEntityList = []
+    friendlyEntityList.append(player)
     while playing:
 
         dt = clock.tick(60) # delta time to keep track of event timing
@@ -314,18 +343,18 @@ while True:
         
         #spawn bosses just for testing
         if len(hostileEntityList) < 5:
-            nb = Boss(10, random.randint(0, WINDOWWIDTH), random.randint(0, WINDOWHEIGHT), pygame.Surface([50,50]), BLUE, 10, 15, "BIGBOSS")
+            nb = Boss(10, random.randint(0, WINDOWWIDTH), random.randint(0, WINDOWHEIGHT), pygame.Surface([50,50]), BLUE, 10, 15, 700, 22, "BIGBOSS")
             hostileEntityList.append(nb)
 
         #-----UPDATE INFORMATION-----
         player.update(dt)
-
+        '''
         if len(hostileEntityList) > 0:
             for e in hostileEntityList:
                 e.update(dt)
                 for b in e.bulletList:
                     b.update(friendlyEntityList)
-
+        '''
         # update all info for bullets belonging to player
         for b in player.bulletList:
             b.update(hostileEntityList)
