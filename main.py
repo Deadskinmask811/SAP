@@ -168,7 +168,7 @@ class Boss(Entity):
         if not self.isShooting:
             self.isShooting = True
         player = Entity 
-        targetLocation = (player.rect.x, player.rect.y)  
+        targetLocation = (player.rect.centerx, player.rect.centery)  
         self.newBullet = Projectile(self, targetLocation, RED, self.projectileSize)    
 
     def update(self, dt):
@@ -226,7 +226,6 @@ class Projectile(object):
     def hasHitEntity(self, entityList):
         for h in entityList:
             if self.rect.colliderect(h) and isinstance(h, Entity): #check to see if boss is hit and reduce hp
-#                print('%s hit: hp left: %s ' %(h.name, h.hp))
                 self.doDamage(1, h) # do 1 damage to h 
                 return h 
 
@@ -237,35 +236,27 @@ class Projectile(object):
     def checkIfLive(self):
         return self.isLive
 
+    def playImpact(self):
+        self.rect.inflate_ip(self.rect.width * 0.75 ,self.rect.height * 0.75)
+        self.image = pygame.Surface([self.rect.width, self.rect.height]) 
+        self.image.fill(RED)
+        
     def update(self, entityList):
         entityList = entityList
-        #TODO check before colission to see if movement[0] is > distance between proj and enemy to draw projectile hitting enemy
         self.movement[0] = self.position[0] - self.rect.x
         self.movement[1] = self.position[1] - self.rect.y
         self.position += self.direction * self.speed  
 
         self.rect.move_ip(self.movement[0], self.movement[1])
-        
+         
         if not self.checkIfLive():
             self.entity.bulletList.remove(self)
-         
-        print(self.angle[0])
-        print(self.angle[1])
         
         if self.entity.bulletList.count(self) > 0:
             enemy = self.hasHitEntity(entityList)
             if self.hasHitEntity(entityList):
                 self.isLive = False
-                print('HIT SOMETHING')
-                #TODO all of this sucks, replace it
-                if self.angle[0] > 0: # if shooting right
-                    self.movement[0] = (enemy.rect.left - self.rect.right) - 1
-                if self.angle[0] < 0: # if shooting left
-                    self.rect.left = enemy.rect.x + enemy.rect.width
-                if self.angle[1] > 0: # if shooting down
-                    self.rect.bottom = enemy.rect.top
-                if self.angle[1] < 0: # if shooting up
-                    self.rect.top = enemy.rect.bottom
+                self.playImpact()
            
         if self.entity.bulletList.count(self) > 0:
             if self.rect.x < 0 or self.rect.x > WINDOWWIDTH or self.rect.y < 0 or self.rect.y > WINDOWHEIGHT:
@@ -348,13 +339,13 @@ while True:
 
         #-----UPDATE INFORMATION-----
         player.update(dt)
-        '''
+ 
         if len(hostileEntityList) > 0:
             for e in hostileEntityList:
                 e.update(dt)
                 for b in e.bulletList:
                     b.update(friendlyEntityList)
-        '''
+         
         # update all info for bullets belonging to player
         for b in player.bulletList:
             b.update(hostileEntityList)
